@@ -1,6 +1,6 @@
-# Bookmark Agent — Multi-Agent Bookmark Organizer
+# Bookmark Agent — LLM-Assisted Bookmark Organizer
 
-A bookmark management system that ingests raw bookmarks from a markdown file, enriches them via the OpenAI Batch API, and routes them to the correct category file through a confidence gated, multi-agent debate-and-consensus pipeline.
+A bookmark management system that ingests raw bookmarks from a Markdown file, enriches them through the OpenAI Batch API, and routes them to the correct category file through a confidence-gated, multi-stage LLM deliberation pipeline.
 
 ## Architecture Overview
 
@@ -11,7 +11,7 @@ bookmarks.md  →  [Stage 1: Batch]  →  OpenAI Batch API  →  SQLite job stor
                      ↓
               [Stage 2: Fetch]  →  Retrieve summaries  →  Persist results
                      ↓
-              [Stage 3: Update]  →  Multi-agent discussion  →  Append to category file
+              [Stage 3: Update]  →  LLM deliberation  →  Append to category file
 ```
 
 ### Stage 1 — Batch Upload (`upload`)
@@ -30,13 +30,13 @@ bookmarks.md  →  [Stage 1: Batch]  →  OpenAI Batch API  →  SQLite job stor
 
 ### Stage 3 — Update / Categorize (`update`)
 
-- Feeds each bookmark and its summary into a **three-agent discussion** framework.
-- Agents debate over **2 rounds** to reach consensus on the best target folder, file, and section.
+- Feeds each bookmark and its summary into a **role-specialized LLM evaluation** workflow.
+- The evaluators use up to **2 deliberation rounds** to converge on the best target folder, file, and section.
 - Appends the bookmark to the resolved category file. Bookmarks are **append-only** — never overwritten.
 
-## Multi-Agent Decision Framework
+## Multi-Stage LLM Decision Framework
 
-The categorization pipeline uses a **confidence-gated, cost-aware decision architecture**. A lightweight Jev classifier handles high-confidence cases, while an actor–critic workflow is used as a targeted escalation path for ambiguous bookmarks.
+The categorization pipeline uses a **confidence-gated, cost-aware decision architecture**. A lightweight Jev classifier handles high-confidence cases, while a proposal–critique–arbitration workflow is used as a targeted escalation path for ambiguous bookmarks. This workflow is inspired by actor–critic separation, but is implemented as structured LLM deliberation rather than reinforcement learning.
 
 ### Decision Routing
 
@@ -54,32 +54,32 @@ Jev classifier
   │
   ├── confidence >= 0.80 ──► Accept classification
   │
-  └── confidence < 0.80 ───► Actor–critic workflow
+  └── confidence < 0.80 ───► Proposal–critique workflow
                        │
                        ├── Round 1: independent proposals
                        ├── Round 2: peer review and revision
                        └── Coordinator: final arbitration
 ```
 
-### Actor–Critic Roles
+### Proposal–Critique–Arbitration Roles
 
-The fallback workflow uses role-specialized agents with different optimization objectives. The separation of proposal generation, criticism, and arbitration reduces reliance on a single model judgment and makes each decision easier to inspect.
+The fallback workflow uses role-specialized LLM evaluators with different optimization objectives. Separating proposal generation, critical review, and arbitration reduces reliance on a single model judgment and makes each decision easier to inspect.
 
 | Component | Responsibility | Optimization Target |
 |-----------|----------------|---------------------|
-| **Taxonomy agent** | Maps the bookmark to a structurally valid file and section in the bookmark tree | Structural fit |
-| **Similarity agent** | Compares the bookmark with semantically related existing entries | Semantic consistency |
-| **Critic agent** | Challenges weak, ambiguous, or invalid placements and surfaces alternatives | Precision and risk reduction |
-| **Coordinator** | Reviews the evidence and selects the final placement when disagreement remains | Final decision quality |
+| **Taxonomy evaluator** | Maps the bookmark to a structurally valid file and section in the bookmark tree | Structural fit |
+| **Similarity evaluator** | Compares the bookmark with semantically related existing entries | Semantic consistency |
+| **Critic evaluator** | Challenges weak, ambiguous, or invalid placements and surfaces alternatives | Precision and risk reduction |
+| **Coordinator model** | Reviews the evidence and selects the final placement when disagreement remains | Final decision quality |
 
 ### Consensus Protocol
 
 1. **Jev classification** — Selects one candidate path and section from the known taxonomy and records confidence and probability data.
-2. **Round 1: independent deliberation** — The Taxonomy, Similarity, and Critic agents independently propose a path, section, title, tags, reasoning, and optional subsection split.
-3. **Agreement check** — If all agents select the same path and section, the result is accepted without another model call.
-4. **Round 2: peer review** — For disagreements, each agent receives the other agents' proposals and may revise or defend its original decision.
-5. **Coordinator arbitration** — If disagreement remains, the Coordinator reviews the bookmark, tree, and both discussion rounds before selecting one final proposal.
-6. **Audit persistence** — Jev results, agent proposals, revisions, and coordinator decisions are persisted for debugging, evaluation, and future threshold calibration.
+2. **Round 1: independent deliberation** — The Taxonomy, Similarity, and Critic evaluators independently propose a path, section, title, tags, reasoning, and optional subsection split.
+3. **Agreement check** — If all evaluators select the same path and section, the result is accepted without another model call.
+4. **Round 2: peer review** — For disagreements, each evaluator receives the other evaluators' proposals and may revise or defend its original decision.
+5. **Coordinator arbitration** — If disagreement remains, the Coordinator model reviews the bookmark, tree, and both discussion rounds before selecting one final proposal.
+6. **Audit persistence** — Jev results, evaluator proposals, revisions, and coordinator decisions are persisted for debugging, evaluation, and future threshold calibration.
 
 ### Engineering Characteristics
 
@@ -87,16 +87,16 @@ The fallback workflow uses role-specialized agents with different optimization o
 - **Role specialization** to reduce correlated model errors.
 - **Taxonomy-constrained decisions** to prevent invented paths or sections.
 - **Structured outputs** validated with Pydantic schemas.
-- **Concurrent agent execution** using `asyncio` where calls are independent.
+- **Concurrent evaluator execution** using `asyncio` where calls are independent.
 - **Deterministic phase transitions** based on explicit agreement checks.
 - **Graceful escalation** when confidence is insufficient or proposals conflict.
 - **Auditable decision traces** for operational debugging and offline evaluation.
 
-This design treats the classifier as the inexpensive default path and the actor–critic workflow as a deliberate escalation mechanism for genuinely ambiguous bookmarks.
+This design treats the classifier as the inexpensive default path and the proposal–critique–arbitration workflow as a deliberate escalation mechanism for genuinely ambiguous bookmarks.
 
 ### Section Splitting
 
-When a target section accumulates **30+ entries**, agents are instructed to propose a `subsection_split` — 2–4 concise subsection names — to keep files navigable.
+When a target section accumulates **30+ entries**, the evaluators are instructed to propose a `subsection_split` — 2–4 concise subsection names — to keep files navigable.
 
 ## Configuration
 
@@ -133,7 +133,7 @@ bookmark_agent/
 │   │   │   └── bookmark_tree.py
 │   │   ├── application/      # Use-case orchestration; currently reserved for future workflows
 │   │   ├── agents/           # LLM prompts, calls, Jev routing, and deliberation
-│   │   │   ├── agents.py     # AgentProposal schema and Chat Completions calls
+│   │   │   ├── agents.py     # Proposal schemas and Chat Completions calls
 │   │   │   ├── discussion.py # Round 1, Round 2, and coordinator workflow
 │   │   │   └── jev_classifier.py # Jev path/section classification gate
 │   │   └── adapters/         # External systems and persistence adapters
@@ -155,7 +155,7 @@ This folder contains the final, categorized bookmarks. Each file is named after 
 
 - Bookmarks are **appended and never overwritten**.
 - Files are structured with section headings for navigability.
-- Sections exceeding 30 entries are split into subsections by the agents.
+- Sections exceeding 30 entries are split into subsections by the evaluators.
 
 ## Usage
 
@@ -166,23 +166,40 @@ python main.py -cs upload
 # Stage 2: Fetch completed batch results
 python main.py -cs download
 
-# Stage 3: Run multi-agent discussion and write to category files
+# Stage 3: Run LLM deliberation and write to category files
 python main.py -cs update
 ```
 
 ## Design Principles
 
 - **Separation of concerns** — Each stage is independently runnable and idempotent.
-- **Auditability** — Every agent decision is logged to `discussions/` and `decision_log` for review.
-- **Cost efficiency** — Uses the OpenAI Batch API (50% cost reduction vs. real-time) for both summarization and agent discussion.
+- **Auditability** — Every evaluator decision is logged to `discussions/` and `decision_log` for review.
+- **Cost efficiency** — Uses the OpenAI Batch API (50% cost reduction vs. real-time) for summarization, while deliberation is reserved for uncertain classifications.
 - **Append-only writes** — Source-of-truth files are never mutated; bookmarks only get added.
-- **Concurrency-first** — Article fetching and agent calls use `asyncio` for throughput.
+- **Concurrency-first** — Article fetching and independent evaluator calls use `asyncio` for throughput.
 - **Compensating transactions** — Batch upload uses a logical rollback strategy across OpenAI and SQLite, cancelling the remote batch and deleting uploaded input files if persistence fails. The local JSONL request file is intentionally preserved as an audit artifact, while cleanup failures are logged without masking the original exception.
 
 ## To Do
 
 - [x] Add explicit schema for every LLM Output
 - [x] Make batch upload operation based on compensating transaction
-- [] Move storage to sqlite for easier section split and one place of truth
-- [] Try other LLM agreement methods to evaluate performance
+- [ ] Move storage to sqlite for easier section split and one place of truth
+- [ ] Try other LLM agreement methods to evaluate performance
 
+## Bookmark Architecture
+
+## Issues or Fix
+
+1. earlier asking model to give output in json format was not working as expected. So giving it a explicit schema.
+
+## To Do
+
+1. move design storage to sqlite3 which is source of truth and can be queried for future decisions
+2. try other LLM decision and evaluation methods to improve bookmark categorization
+3. IMP: merge batch output and fetch output to know which url we are getting the hint and tags too.
+4. How to handle the split suggestions -- need another flow for that
+5. move the processed file to different folder after doing the fetch and download thing 
+
+## Learn
+
+1. complete the OpenAI API integration while completing this project.
