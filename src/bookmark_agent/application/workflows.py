@@ -129,8 +129,8 @@ async def run_batch_upload(
     except Exception as exc:
         await _compensate_batch_submission(client, submission, file_path)
         raise BatchUploadError(
-            f"Batch upload failed for {len(batch)} bookmarks; "
-            f"request file preserved at {file_path}"
+            f"Batch upload failed for {len(batch)} bookmarks: {exc} "
+            f"(request file preserved at {file_path})"
         ) from exc
 
 

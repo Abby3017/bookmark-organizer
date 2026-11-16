@@ -55,6 +55,11 @@ Key properties:
 ## Usage
 
 ```bash
+# One-time setup: create the SQLite batch-job store and save its path to
+# config.yaml. Re-running with an existing db is refused (data is never wiped).
+python src/cli.py --init-db            # creates data/bookmarks.db
+python src/cli.py --init-db myfolder   # or a folder you choose
+
 # Agent mode — describe what you want; the agent picks the tools
 python cli.py -cs agent --prompt "Check the pipeline state and run whatever is needed"
 

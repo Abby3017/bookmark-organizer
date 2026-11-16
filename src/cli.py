@@ -27,6 +27,8 @@ from bookmark_agent.domain.errors import (
     NoPendingBatchError,
 )
 from bookmark_agent.config import load_settings
+from bookmark_agent.adapters.sqlite_store import init_db
+from bookmark_agent.config import update_setting
 
 from utils.colors import c, colorize, error, header, info, ok, warn
 
@@ -56,6 +58,8 @@ def parse_args():
     parser.add_argument('--prompt', type=str,
                         default="Check the current bookmark pipeline state and run whatever stages are needed.",
                         help="Instruction for the agent stage (-cs agent)")
+    parser.add_argument('--init-db', nargs='?', const='data', default=None, metavar='FOLDER',
+                        help="Create bookmarks.db in FOLDER (default: data) and save its path to config.yaml")
     parser.add_argument("-gbg", "--generate_bookmark_graph",
                         action='store_true',
                         default=False,
@@ -147,8 +151,23 @@ async def dispatch(args, client, config: dict) -> int:
     return EXIT_OK
 
 
+def init_db_command(folder: str) -> int:
+    try:
+        db_file = init_db(folder)
+    except FileExistsError as exc:
+        print(warn(str(exc)))
+        return EXIT_PIPELINE_ERROR
+    update_setting("db_path", db_file)
+    print(ok(f"Database created at {db_file} (saved to config.yaml)"))
+    return 0
+
+
 def main() -> int:
     args = parse_args()
+
+    # init-db runs before load_settings: a fresh clone may have no config.yaml yet
+    if args.init_db is not None:
+        return init_db_command(args.init_db)
 
     log_level = logging.WARNING if args.quiet else logging.DEBUG
     logging.basicConfig(level=log_level, format='%(message)s')

@@ -72,6 +72,22 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "init_db",
+            "description": "Create the SQLite batch-job store (bookmarks.db) in a folder (default: data) and save its path to config.yaml. Refused if the db already exists. Needed before upload if no store is set up.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "folder": {
+                        "type": "string",
+                        "description": "Folder for the db file. Defaults to 'data'.",
+                    }
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "list_bookmark_sections",
             "description": "List every path#section in the bookmark tree with entry counts and example titles, so placements can be inspected and verified.",
             "parameters": {"type": "object", "properties": {}},
@@ -92,6 +108,12 @@ async def execute_tool(name: str, args: dict, client, config: dict) -> dict:
         if name == "categorize_bookmarks":
             result = await workflows.run_categorization(client, **args)
             return {"final_decisions": result.final_decisions}
+        if name == "init_db":
+            from bookmark_agent.adapters.sqlite_store import init_db
+            from bookmark_agent.config import update_setting
+            db_file = init_db(args.get("folder") or "data")
+            update_setting("db_path", db_file)
+            return {"db_path": db_file}
         if name == "list_bookmark_sections":
             tree_path = config.get("stored_bookmark_graph_path")
             if not tree_path:
@@ -110,6 +132,7 @@ async def run_agent(prompt: str, client, config: dict) -> str:
         {"role": "user", "content": prompt},
     ]
     for _ in range(MAX_TURNS):
+        # visibility of context size, tool called and cost
         response = await client.chat.completions.create(
             model=MODEL, messages=messages, tools=TOOLS, tool_choice="auto"
         )
