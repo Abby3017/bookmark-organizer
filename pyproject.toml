@@ -1,0 +1,16 @@
+[project]
+name = "bookmark-organizer"
+version = "0.2.0"
+description = "LLM bookmark organizer: batch summarization via the OpenAI Batch API, confidence-gated multi-agent categorization, and a tool-calling agent harness that decides which pipeline stage to run."
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2",
+    "openai>=1",
+    "httpx>=0.27",
+    "python-dotenv>=1",
+    "pyyaml>=6",
+    "beautifulsoup4>=4.12",
+]
+
+# shortcut: not packaged (no build system) — run via `uv run python src/cli.py`;
+# add a build system only if this ever becomes an installable library

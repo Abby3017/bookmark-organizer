@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+# runtime state, not source (config.yaml is tracked as the format template)
+bookmarks.md
+data/
+discussions/
