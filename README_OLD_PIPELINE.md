@@ -161,13 +161,13 @@ This folder contains the final, categorized bookmarks. Each file is named after 
 
 ```bash
 # Stage 1: Submit bookmarks to OpenAI Batch API
-python main.py -cs upload
+python cli.py -cs upload
 
 # Stage 2: Fetch completed batch results
-python main.py -cs download
+python cli.py -cs download
 
 # Stage 3: Run LLM deliberation and write to category files
-python main.py -cs update
+python cli.py -cs update
 ```
 
 ## Design Principles
