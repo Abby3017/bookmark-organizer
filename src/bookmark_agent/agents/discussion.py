@@ -53,21 +53,19 @@ def parse_agent_discussion(results):
         bookmark_id = None
         path_section_list = []
         tags = None
-        title = None
         for agent in AGENT_ROLES:
             agent_discussion = discussion[agent]
             if not bookmark_id:
                 bookmark_id = agent_discussion['id']
             if not tags:
                 tags = agent_discussion['tags']
-            if not title:
-                title = agent_discussion['title']
             path_section = agent_discussion['path'] + "#" + agent_discussion['section']
             path_section_list.append(path_section)
         result = all(x == path_section_list[0] for x in path_section_list)
         if result:
-            agreed_bookmark_position.append({"id": bookmark_id, "path": path_section_list[0],
-                                             "tags": tags, "title": title})
+            path, section = path_section_list[0].split("#", maxsplit=1)
+            agreed_bookmark_position.append({"id": bookmark_id, "path": path,
+                                             "section": section, "tags": tags})
         else:
             disagreed_bookmark_entries.append(bookmark_id)
     return agreed_bookmark_position, disagreed_bookmark_entries
@@ -193,7 +191,7 @@ async def orchestrate_discussion(
         str(entry.id): result
         for entry, result in zip(fallback_entries, round_one_results)
     }
-    output_folder = config.get("agent_discussion_folder", os.getcwd())
+    output_folder = config.get("agent_discussion_path", os.getcwd())
     _save_json(output_folder, round_one_by_id, "1")
 
     agreed_round_one, disputed_ids = parse_agent_discussion(round_one_results)
@@ -252,9 +250,9 @@ async def orchestrate_discussion(
     for proposal in coordinator_results:
         final_entries.append({
             "id": proposal["id"],
-                "path": f'{proposal["path"]}#{proposal["section"]}',
-                "tags": proposal["tags"],
-                "title": proposal["title"],
+            "path": proposal["path"],
+            "section": proposal["section"],
+            "tags": proposal["tags"],
         })
     logging.debug(f"Round2, number of disagreement {len(still_disputed_ids)}")
     logging.debug(f"Round2, no disagreement, Len of bookmark processed {len(final_entries)}")
