@@ -12,6 +12,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List
+from langfuse import observe
 
 from bookmark_agent.adapters.markdown_parser import (
     parse_bookmarks_file,
@@ -32,11 +33,13 @@ from bookmark_agent.domain.bookmark_tree import (
     BookmarkTree,
     extract_bookmark_files,
 )
+
 from bookmark_agent.domain.errors import (
     BatchUploadError,
     ConfigError,
     NoPendingBatchError,
 )
+
 from utils.batch_request import download_batch_file, retrieve_batch_job
 
 
@@ -224,6 +227,7 @@ def merge_bookmark_entries(bookmark_entries, processed_entries):
     return processed_entries
 
 
+@observe()  # one nested Langfuse trace per categorization run (Jev, rounds, coordinator)
 async def run_categorization(
     client,
     bookmarks_file: str = "bookmarks.md",

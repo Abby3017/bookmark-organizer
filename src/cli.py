@@ -45,6 +45,11 @@ def get_client() -> AsyncOpenAI:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ConfigError("OPENAI_API_KEY is not set")
+    # Trace every LLM call in Langfuse when keys are present (self-hosted or cloud);
+    # falls back to the plain client so the repo runs without it.
+    if os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY"):
+        from langfuse.openai import AsyncOpenAI as LangfuseAsyncOpenAI
+        return LangfuseAsyncOpenAI(api_key=api_key)
     return AsyncOpenAI(api_key=api_key)
 
 
@@ -106,7 +111,7 @@ async def update_command(client, config: dict) -> int:
 
     print(ok(f"Resolved {len(result.final_decisions)} bookmark placements"))
     for decision in result.final_decisions:
-        placement = decision.get("path", "?")
+        placement = f"{decision.get('path', '?')}#{decision.get('section', '?')}"
         print(info(f"  {decision.get('id', '?')} -> {placement}"))
     return 0
 
@@ -187,6 +192,13 @@ def main() -> int:
     except KeyboardInterrupt:
         print(warn("Interrupted by user"))
         return EXIT_INTERRUPTED
+    finally:
+        # short-lived CLI: send buffered Langfuse traces before exit
+        try:
+            from langfuse import get_client as langfuse_get_client
+            langfuse_get_client().flush()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

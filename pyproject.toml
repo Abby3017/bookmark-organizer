@@ -10,6 +10,7 @@ dependencies = [
     "python-dotenv>=1",
     "pyyaml>=6",
     "beautifulsoup4>=4.12",
+    "langfuse>=4",
 ]
 
 # shortcut: not packaged (no build system) — run via `uv run python src/cli.py`;

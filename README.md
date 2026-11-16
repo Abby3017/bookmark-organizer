@@ -74,6 +74,19 @@ python cli.py -cs update
 
 Environment: `OPENAI_API_KEY` (workflows/agent loop) and `OPENROUTER_PRJ_API_KEY` (Jev classifier), plus a `config.yaml` (see [README_OLD_PIPELINE.md](./README_OLD_PIPELINE.md) for its shape).
 
+## Tracing with Langfuse
+
+Every LLM call — the agent loop's tool calls, the taxonomy/similarity/critic agents, the coordinator, and Jev classifications — is traced to [Langfuse](https://langfuse.com) when credentials are present; without them the app runs unchanged.
+
+```bash
+# .env
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_BASE_URL=http://localhost:3000   # self-hosted via docker; omit for Langfuse cloud
+```
+
+Self-host locally: `docker compose up` from [langfuse/langfuse](https://github.com/langfuse/langfuse), then create API keys in the UI (Settings → API Keys). Run any stage (`-cs update`, `-cs agent`) and open the Langfuse UI: each run appears as one trace with the Jev classifications, both deliberation rounds, and the coordinator nested inside.
+
 ## Project Structure
 
 ```
@@ -93,12 +106,12 @@ tests/
 ## Self-Checks
 
 ```bash
-python tests/test_harness.py   # no network, no API key needed
+python tests/test_harness.py      # no network, no API key needed
+python tests/test_jev_classifier.py
 ```
 
 ## To Do
 
-- [ ] Fix `proposal['title']` access in `parse_agent_discussion`/coordinator — `AgentProposal` has no `title` field (the harness surfaces this as an agent-visible error today)
 - [ ] Carry-over goals from v1: SQLite as source of truth, batch/fetch hint merging, subsection-split flow
 
 ## Learn

@@ -1,14 +1,14 @@
 """Jev classification for selecting a bookmark path and section."""
 
 from dataclasses import asdict, dataclass
-import json
+import logging
 import os
 from typing import Any
 
+from langfuse import get_client, observe
 import httpx
 
 from bookmark_agent.agents.agents import AgentProposal, format_entry
-from utils.tree_helpers import tree_to_dict
 
 
 DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
@@ -54,6 +54,7 @@ def build_jev_request(entry: Any, candidates: Any) -> dict[str, Any]:
     return {"model": JEV_MODEL, "state": state, "questions": questions}
 
 
+@observe(as_type="generation")
 async def classify_bookmark_with_jev(
     entry: Any,
     candidates: Any,
@@ -81,12 +82,26 @@ async def classify_bookmark_with_jev(
     if choice not in candidates:
         raise ValueError(f"Jev returned an unknown candidate section: {choice!r}")
 
+    usage = data.get("usage") or {}
+    cost = usage.get("cost")
+    if cost is None:
+        logging.warning("Jev response has no usage.cost; Langfuse will show $0")
+    # OpenRouter reports the exact charge; Langfuse has no pricing row for jev.
+    get_client().update_current_generation(
+        model=data.get("model", JEV_MODEL),
+        usage_details={
+            "input": usage.get("input_tokens", 0),
+            "output": usage.get("output_tokens", 0),
+        },
+        cost_details={"total": float(cost or 0.0)},
+    )
+
     return JevClassification(
         bookmark_id=str(entry.id),
         choice=choice,
         confidence=float(answer.get("confidence") or 0.0),
         probabilities=answer.get("probabilities") or {},
-        usage=data.get("usage") or {},
+        usage=usage,
     )
 
 
