@@ -1,0 +1,7 @@
+batch_size: 5
+llm_model: "gpt-4o"
+bookmark:
+processed_path: ""
+stored_bookmark_graph_path: ""
+agent_discussion_path: ""
+db_path: ""
