@@ -182,11 +182,6 @@ async def orchestrate_discussion(
         logging.debug("Jev accepted all bookmark classifications")
         return accepted_entries
 
-    import pdb; pdb.set_trace()
-
-    fallback_entries = entries
-    accepted_entries = []
-
     # Round 1: ask all three agents for a proposal.
     round_one_results = await asyncio.gather(*(
         _discuss_one_entry(client, entry, tree, batch_hint, temperatures)

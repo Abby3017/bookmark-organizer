@@ -20,6 +20,7 @@ from bookmark_agent.application.workflows import (
     run_categorization,
     build_bookmark_graph,
 )
+from bookmark_agent.harness import run_agent
 from bookmark_agent.domain.errors import (
     BookmarkAgentError,
     ConfigError,
@@ -50,8 +51,11 @@ def parse_args():
         description="Bookmark management system where we batch and update given bookmarks")
     parser.add_argument("-cs", "--current_stage",
                         type=str,
-                        choices=["upload", "download", "update"],
+                        choices=["upload", "download", "update", "agent"],
                         help="Run given stage of the program to update the bookmark from batch/fetch/update")
+    parser.add_argument('--prompt', type=str,
+                        default="Check the current bookmark pipeline state and run whatever stages are needed.",
+                        help="Instruction for the agent stage (-cs agent)")
     parser.add_argument("-gbg", "--generate_bookmark_graph",
                         action='store_true',
                         default=False,
@@ -103,6 +107,13 @@ async def update_command(client, config: dict) -> int:
     return 0
 
 
+async def agent_command(client, config: dict, prompt: str) -> int:
+    print(header("Stage: Agent Harness"))
+    answer = await run_agent(prompt, client, config)
+    print(ok(answer or "Agent finished with no answer."))
+    return 0
+
+
 def graph_command(config: dict) -> int:
     print(header("Generating Bookmark Graph"))
     inserted = build_bookmark_graph(config)
@@ -130,6 +141,8 @@ async def dispatch(args, client, config: dict) -> int:
         return await download_command(client)
     if args.current_stage == "update":
         return await update_command(client, config)
+    if args.current_stage == "agent":
+        return await agent_command(client, config, args.prompt)
 
     return EXIT_OK
 
