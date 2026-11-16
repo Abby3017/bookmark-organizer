@@ -31,7 +31,11 @@ def candidate_sections(tree: Any) -> dict[str, dict[str, Any]]:
 
     def visit(node: dict[str, Any]) -> None:
         path = node["path"] or node["name"]
-        for section_name, section in node.get("sections", {}).items():
+        sections = node.get("sections", {})
+        if not sections and node.get("file_path"):
+            # A file with no ## headings still accepts entries; parser uses "default".
+            sections = {"default": {"entry_count": 0, "entries": []}}
+        for section_name, section in sections.items():
             label = f"{path}#{section_name}"
             candidates[label] = {
                 "path": path,

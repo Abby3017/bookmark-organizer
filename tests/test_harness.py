@@ -24,6 +24,7 @@ from bookmark_agent.domain.bookmark_tree import (
     SectionNode,
 )
 from bookmark_agent.harness import TOOLS, run_agent
+from utils.tree_helpers import candidate_sections
 
 
 def _fake_client(script, seen):
@@ -91,8 +92,25 @@ def test_tool_error_is_fed_back_not_raised():
     assert tool_msgs and "error" in tool_msgs[0]["content"], tool_msgs
 
 
+def test_candidate_sections_include_empty_files():
+    tree = BookmarkTree()
+    empty = BookmarkNode(name="rag", path="rag", file_path="rag.md")
+    tree.root.children["rag"] = empty
+    node = BookmarkNode(name="ai", path="ai", file_path="ai.md")
+    section = SectionNode(name="Libraries")
+    section.entries.append(BookmarkEntry(title="PyTorch", url="https://pytorch.org"))
+    node.sections["Libraries"] = section
+    tree.root.children["ai"] = node
+
+    candidates = candidate_sections(tree)
+    assert "rag#default" in candidates, candidates
+    assert candidates["rag#default"]["entry_count"] == 0
+    assert "ai#Libraries" in candidates, candidates
+
+
 if __name__ == "__main__":
     test_tool_names_unique()
     test_agent_explores_tree_then_answers()
     test_tool_error_is_fed_back_not_raised()
+    test_candidate_sections_include_empty_files()
     print("all harness self-checks passed")

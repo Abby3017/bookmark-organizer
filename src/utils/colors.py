@@ -12,7 +12,7 @@ class c:
     Y = '\033[93m'   # yellow
     BL = '\033[94m'   # blue
     M = '\033[95m'   # magenta
-    C = '\033[96m'   # cyan
+    C = '\033[38;2;0;255;255m'   # cyan
     W = '\033[97m'   # white
 
 
